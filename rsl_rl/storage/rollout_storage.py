@@ -59,7 +59,7 @@ class RolloutStorage:
     def __init__(self, num_envs, num_transitions_per_env, obs_shape, privileged_obs_shape, actions_shape,
                  history_dim = 42 * 5, wm_feature_dim = 1536, device='cpu'):
 
-        self.device = device
+        self.device = "cpu"
 
         self.obs_shape = obs_shape
         self.privileged_obs_shape = privileged_obs_shape

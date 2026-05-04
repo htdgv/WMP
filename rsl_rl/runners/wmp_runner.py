@@ -72,7 +72,7 @@ class WMPRunner:
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
         self.depth_predictor_cfg = train_cfg["depth_predictor"]
-        self.device = device
+        self.device = "cpu"
         self.env = env
         self.history_length = history_length
         if self.env.num_privileged_obs is not None:

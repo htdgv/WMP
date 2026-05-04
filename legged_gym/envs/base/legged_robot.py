@@ -109,7 +109,7 @@ class LeggedRobot(BaseTask):
         self.lookat_id = 8
         self.init_done = False
         self._parse_cfg(self.cfg)
-        super().__init__(self.cfg, sim_params, physics_engine, sim_device, headless)
+        super().__init__(self.cfg, sim_params, physics_engine, "cpu", headless)
 
         self.resize_transform = torchvision.transforms.Resize((self.cfg.depth.resized[0], self.cfg.depth.resized[1]),
                                                               interpolation=torchvision.transforms.InterpolationMode.BICUBIC)

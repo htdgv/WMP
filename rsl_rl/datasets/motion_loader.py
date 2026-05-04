@@ -80,7 +80,7 @@ class AMPLoader:
 
         time_between_frames: Amount of time in seconds between transition.
         """
-        self.device = device
+        self.device = "cpu"
         self.time_between_frames = time_between_frames
         
         # Values to store for each trajectory.

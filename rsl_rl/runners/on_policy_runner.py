@@ -55,7 +55,7 @@ class OnPolicyRunner:
         self.cfg=train_cfg["runner"]
         self.alg_cfg = train_cfg["algorithm"]
         self.policy_cfg = train_cfg["policy"]
-        self.device = device
+        self.device = "cpu"
         self.env = env
         if self.env.num_privileged_obs is not None:
             num_critic_obs = self.env.num_privileged_obs 

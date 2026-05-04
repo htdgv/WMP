@@ -1,4 +1,4 @@
-# Documentation
+# Documentation -- CPU mitigation
 
 This document records changes made to fit with our current server and environment. Please refer to the original README.md for more details on commands and instructions.
 
@@ -69,6 +69,9 @@ In `legged_gym/envs/a1/a1_amp_config.py`:
 In `legged_gym/envs/a1/a1_config.py`:
 - line 39: `self.num_envs = 5480` -> `self.num_envs = 512`
 
+In `legged_gym/envs/base/legged_robot_config.py`:
+- line 39: `self.num_envs = 4096` -> `self.num_envs = 512`
+
 | GPU VRAM | Suggested `num_envs` |
 | -------- | -------------------- |
 | 6 GB     | 64–128               |
@@ -116,3 +119,45 @@ In `legged_gym/envs/base/legged_robot.py`:
 - line 1239: `...astype(np.int)` --> `...astype(np.int32)`
 - line 1240: `...astype(np.int)` --> `...astype(np.int32)`
 - line 1241: `...astype(np.int)` --> `...astype(np.int32)`
+
+
+## Simulation error fix
+In `legged_gym/utils/helpers.py`: 
+- line 157: `...anymal_c_flat` --> `...a1_amp`
+
+---
+
+## Mitigating to CPU
+In `legged_gym/utils/helpers.py`: 
+- line 166: `"...default": "cuda:0"` --> `"...default": "cpu"`
+- line 172: `"...default": "None"` --> `"...default": "cpu"`
+
+In `dreamer/configs.yaml`: 
+- line 3: `device: 'cuda:0'` --> `device: 'cpu'`
+
+In `isaacgym/python/isaacgym/gymutil.py`: 
+- line 305: `...default="cuda:0"` --> `...default="cpu"`
+- line 306: `...default="gpu"` --> `...default="cpu"`
+
+In `legged_gym/envs/base/base_task.py`: commented the block below: 
+```python
+        # if sim_device_type=='cuda' and sim_params.use_gpu_pipeline:
+        #     self.device = self.sim_device
+        # else:
+        self.device = 'cpu'
+```
+
+In `legged_gym/envs/base/legged_robot.py`: 
+- line 112: `...sim_device` --> `"cpu"`
+
+In `rsl_rl/datasets/motion_loader.py`:
+- line 83: `self.device = device` --> `self.device = "cpu"`
+
+In `rsl_rl/runners/on_policy_runner.py`: 
+- line 58: `self.device = device` --> `self.device = "cpu"`
+
+In `rsl_rl/runners/wmp_runner.py`: 
+- line 75: `self.device = device` --> `self.device = "cpu"`
+
+In `rsl_rl/storage/rollout_storage.py`: 
+- line 62: `self.device = device` --> `self.device = "cpu"`

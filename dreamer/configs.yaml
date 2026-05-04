@@ -1,6 +1,6 @@
 defaults:
 
-  device: 'cuda:0'
+  device: 'cpu'
   compile: True
   precision: 32
   debug: False
