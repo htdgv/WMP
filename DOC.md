@@ -28,3 +28,15 @@ In `isaacgym/python/isaacgym/__init__.py`:
 
 In `isaacgym/python/isaacgym/gymapi.py`: 
 - line 51: `package_path = "isaacgym._bindings.%s.%s" % (platform, module_name)` --> `package_path = "isaacgym.python.isaacgym._bindings.%s.%s" % (platform, module_name)`
+
+In `legged_gym/envs/base/base_task.py`: 
+- line 32: `from isaacgym import gymapi` --> `from isaacgym.python.isaacgym import gymapi`
+- line 33: `from isaacgym import gymutil` --> `from isaacgym.python.isaacgym import gymutil`
+
+In `legged_gym/utils/helpers.py`: 
+- line 39: `from isaacgym import gymapi` --> `from isaacgym.python.isaacgym import gymapi`
+- line 40: `from isaacgym import gymutil` --> `from isaacgym.python.isaacgym import gymutil`
+
+## NumPy compatible issue resolution
+In `isaacgym/python/isaacgym/torch_utils.py`: 
+- line 135: `...dtype=np.float` --> `...dtype=np.float32`

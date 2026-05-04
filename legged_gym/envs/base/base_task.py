@@ -29,8 +29,8 @@
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
 import sys
-from isaacgym import gymapi
-from isaacgym import gymutil
+from isaacgym.python.isaacgym import gymapi
+from isaacgym.python.isaacgym import gymutil
 import numpy as np
 import torch
 
