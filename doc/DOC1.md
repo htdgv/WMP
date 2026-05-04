@@ -105,6 +105,9 @@ In `legged_gym/utils/terrain.py`:
 In `isaacgym/python/isaacgym/terrain_utils.py`: 
 - line 13: `from isaacgym import gymutil, gymapi` --> `from isaacgym.python.isaacgym import gymutil, gymapi`
 
+In `legged_gym/tests/test_env.py`:
+- line 35: `import isaacgym` --> `import isaacgym.python.isaacgym`
+
 ## NumPy compatible issue resolution
 In `isaacgym/python/isaacgym/torch_utils.py`: 
 - line 135: `...dtype=np.float` --> `...dtype=np.float32`
