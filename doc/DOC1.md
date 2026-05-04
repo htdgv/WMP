@@ -38,6 +38,7 @@ pip install pybullet
 pip install ruamel.yaml
 pip install matplotlib
 pip install opencv-python
+pip install imageio
 ```
 
 
@@ -111,6 +112,9 @@ In `isaacgym/python/isaacgym/terrain_utils.py`:
 In `legged_gym/tests/test_env.py`:
 - line 35: `import isaacgym` --> `import isaacgym.python.isaacgym`
 
+In `legged_gym/scripts/play.py`:
+- line 35: `import isaacgym` --> `import isaacgym.python.isaacgym`
+
 ## NumPy compatible issue resolution
 In `isaacgym/python/isaacgym/torch_utils.py`: 
 - line 135: `...dtype=np.float` --> `...dtype=np.float32`
@@ -161,3 +165,16 @@ In `rsl_rl/runners/wmp_runner.py`:
 
 In `rsl_rl/storage/rollout_storage.py`: 
 - line 62: `self.device = device` --> `self.device = "cpu"`
+
+> As we encounter too many segmentation faults while running `legged_gym/scripts/play.py`, we decide to rewrite an entirely new test script `legged_gym/scripts/play_v2.py`to run completely on CPU. The original test script is kept for reference and future debugging.
+>
+> As we encounter too many segmentation faults while running `legged_gym/tests/test_env.py`, we decide to rewrite an entirely new test script `legged_gym/tests/test_env2.py`to run completely on CPU. The original test script is kept for reference and future debugging.
+
+In `legged_gym/envs/__init__.py`: 
+- line 33: `from .base.legged_robot import LeggedRobot` --> `from .base.legged_robot_v2 import LeggedRobot`
+
+In `rsl_rl/runners/wmp_runner.py`:
+- line 53: `import ruamel.yaml as yaml` --> `from ruamel.yaml import YAML`
+- line 145: `configs = yaml.safe_load(` --> `yaml_loader = YAML(typ='safe', pure=True); configs = yaml_loader.load(`
+
+In `rsl_rl/datasets/motion_loader.py`: replace all `np.int` with `np.int32` to avoid deprecation warning.

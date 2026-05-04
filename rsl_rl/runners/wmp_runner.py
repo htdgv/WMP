@@ -50,7 +50,7 @@ from rsl_rl.modules import DepthPredictor
 import torch.optim as optim
 
 from dreamer.models import *
-import ruamel.yaml as yaml
+from ruamel.yaml import YAML
 import argparse
 import pathlib
 import sys
@@ -142,7 +142,7 @@ class WMPRunner:
     def _build_world_model(self):
         # world model
         print('Begin construct world model')
-        configs = yaml.safe_load(
+        yaml_loader = YAML(typ='safe', pure=True); configs = yaml_loader.load(
             (pathlib.Path(sys.argv[0]).parent.parent.parent / "dreamer/configs.yaml").read_text()
         )
 

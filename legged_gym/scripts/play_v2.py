@@ -28,7 +28,7 @@
 #
 # Copyright (c) 2021 ETH Zurich, Nikita Rudin
 
-# This file may have been modified by Bytedance Ltd. and/or its affiliates (“Bytedance's Modifications”).
+# This file may have been modified by Bytedance Ltd. and/or its affiliates ("Bytedance's Modifications").
 # All Bytedance's Modifications are Copyright (year) Bytedance Ltd. and/or its affiliates.
 
 import os
@@ -46,6 +46,7 @@ from legged_gym.utils import  get_args, export_policy_as_jit, task_registry, Log
 
 import numpy as np
 import torch
+import imageio
 
 
 def play(args):
@@ -55,9 +56,6 @@ def play(args):
     env_cfg.terrain.num_cols = 1
     env_cfg.terrain.curriculum = False
     env_cfg.noise.add_noise = False
-    # env_cfg.domain_rand.randomize_friction = False
-    # env_cfg.domain_rand.randomize_restitution = False
-    # env_cfg.commands.heading_command = True
 
     env_cfg.domain_rand.friction_range = [1.0, 1.0]
     env_cfg.domain_rand.restitution_range = [0.0, 0.0]
@@ -69,9 +67,7 @@ def play(args):
     env_cfg.domain_rand.randomize_action_latency = False
     env_cfg.domain_rand.push_robots = False
     env_cfg.domain_rand.randomize_gains = True
-    # env_cfg.domain_rand.randomize_base_mass = False
     env_cfg.domain_rand.randomize_link_mass = False
-    # env_cfg.domain_rand.randomize_com_pos = False
     env_cfg.domain_rand.randomize_motor_strength = False
 
     train_cfg.runner.amp_num_preload_transitions = 1
@@ -79,12 +75,9 @@ def play(args):
     env_cfg.domain_rand.stiffness_multiplier_range = [1.0, 1.0]
     env_cfg.domain_rand.damping_multiplier_range = [1.0, 1.0]
 
-
-    # env_cfg.terrain.mesh_type = 'plane'
     if(env_cfg.terrain.mesh_type == 'plane'):
         env_cfg.rewards.scales.feet_edge = 0
         env_cfg.rewards.scales.feet_stumble = 0
-
 
     if(args.terrain not in ['slope', 'stair', 'gap', 'climb', 'crawl', 'tilt']):
         print('terrain should be one of slope, stair, gap, climb, crawl, and tilt, set to climb as default')
@@ -113,15 +106,16 @@ def play(args):
     env, _ = task_registry.make_env(name=args.task, args=args, env_cfg=env_cfg)
     _, _ = env.reset()
     obs = env.get_observations()
+
     # load policy
     train_cfg.runner.resume = True
     train_cfg.runner.load_run = 'WMP'
-
-
     train_cfg.runner.checkpoint = -1
     ppo_runner, train_cfg = task_registry.make_wmp_runner(env=env, name=args.task, args=args, train_cfg=train_cfg)
-    policy = ppo_runner.get_inference_policy(device=env.device)
-    
+
+    # Retrieve inference policy on CPU
+    policy = ppo_runner.get_inference_policy(device='cpu')
+
     # export policy as a jit module (used to run it from C++)
     if EXPORT_POLICY:
         path = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'policies')
@@ -136,63 +130,77 @@ def play(args):
     camera_position = np.array(env_cfg.viewer.pos, dtype=np.float64)
     camera_vel = np.array([1., 1., 0.])
     camera_direction = np.array(env_cfg.viewer.lookat) - np.array(env_cfg.viewer.pos)
+
+    # frame / video output paths
+    video_base = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported')
+    frames_dir = os.path.join(video_base, 'frames', args.terrain)
+    video_path = os.path.join(video_base, 'videos', f"{args.terrain}.mp4")
+    if RECORD_FRAMES:
+        os.makedirs(frames_dir, exist_ok=True)
+        os.makedirs(os.path.dirname(video_path), exist_ok=True)
     img_idx = 0
 
     history_length = 5
+    # All tensors explicitly on CPU
     trajectory_history = torch.zeros(size=(env.num_envs, history_length, env.num_obs -
-                                            env.privileged_dim - env.height_dim - 3), device = env.device)
+                                            env.privileged_dim - env.height_dim - 3), device='cpu')
     obs_without_command = torch.concat((obs[:, env.privileged_dim:env.privileged_dim + 6],
                                         obs[:, env.privileged_dim + 9:-env.height_dim]), dim=1)
     trajectory_history = torch.concat((trajectory_history[:, 1:], obs_without_command.unsqueeze(1)), dim=1)
 
-    world_model = ppo_runner._world_model.to(env.device)
+    # Move world model to CPU
+    world_model = ppo_runner._world_model.to('cpu')
     wm_latent = wm_action = None
-    wm_is_first = torch.ones(env.num_envs, device=env.device)
+    wm_is_first = torch.ones(env.num_envs, device='cpu')
     wm_update_interval = env.cfg.depth.update_interval
     wm_action_history = torch.zeros(size=(env.num_envs, wm_update_interval, env.num_actions),
-                                    device=env.device)
+                                    device='cpu')
     wm_obs = {
-        "prop": obs[:, env.privileged_dim: env.privileged_dim + env.cfg.env.prop_dim],
+        "prop": obs[:, env.privileged_dim: env.privileged_dim + env.cfg.env.prop_dim].to('cpu'),
         "is_first": wm_is_first,
     }
 
     if (env.cfg.depth.use_camera):
         wm_obs["image"] = torch.zeros(((env.num_envs,) + env.cfg.depth.resized + (1,)),
-                                      device=world_model.device)
+                                      device='cpu')
 
-    wm_feature = torch.zeros((env.num_envs, ppo_runner.wm_feature_dim), device=env.device)
+    wm_feature = torch.zeros((env.num_envs, ppo_runner.wm_feature_dim), device='cpu')
 
     total_reward = 0
-    not_dones = torch.ones((env.num_envs,), device=env.device)
+    not_dones = torch.ones((env.num_envs,), device='cpu')
     for i in range(1*int(env.max_episode_length) + 3):
         if (env.global_counter % wm_update_interval == 0):
             if (env.cfg.depth.use_camera):
-                wm_obs["image"][env.depth_index] = infos["depth"].unsqueeze(-1).to(world_model.device)
+                # Move depth data to CPU before feeding to world model
+                wm_obs["image"][env.depth_index] = infos["depth"].unsqueeze(-1).to('cpu')
 
             wm_embed = world_model.encoder(wm_obs)
             wm_latent, _ = world_model.dynamics.obs_step(wm_latent, wm_action, wm_embed, wm_obs["is_first"], sample=True)
             wm_feature = world_model.dynamics.get_deter_feat(wm_latent)
             wm_is_first[:] = 0
 
-        history = trajectory_history.flatten(1).to(env.device)
-        actions = policy(obs.detach(), history.detach(), wm_feature.detach())
-
+        history = trajectory_history.flatten(1).to('cpu')
+        actions = policy(obs.detach().to('cpu'), history.detach(), wm_feature.detach())
 
         obs, _, rews, dones, infos, reset_env_ids, _ = env.step(actions.detach())
 
-        not_dones *= (~dones)
-        total_reward += torch.mean(rews * not_dones)
+        # Keep reward tracking on CPU
+        not_dones = not_dones.to('cpu')
+        dones_cpu = dones.to('cpu')
+        rews_cpu = rews.to('cpu')
+        not_dones *= (~dones_cpu)
+        total_reward += torch.mean(rews_cpu * not_dones)
 
         # update world model input
         wm_action_history = torch.concat(
-            (wm_action_history[:, 1:], actions.unsqueeze(1)), dim=1)
+            (wm_action_history[:, 1:], actions.to('cpu').unsqueeze(1)), dim=1)
         wm_obs = {
-            "prop": obs[:, env.privileged_dim: env.privileged_dim + env.cfg.env.prop_dim],
+            "prop": obs[:, env.privileged_dim: env.privileged_dim + env.cfg.env.prop_dim].to('cpu'),
             "is_first": wm_is_first,
         }
         if (env.cfg.depth.use_camera):
             wm_obs["image"] = torch.zeros(((env.num_envs,) + env.cfg.depth.resized + (1,)),
-                                          device=world_model.device)
+                                          device='cpu')
 
         reset_env_ids = reset_env_ids.cpu().numpy()
         if (len(reset_env_ids) > 0):
@@ -201,23 +209,23 @@ def play(args):
 
         wm_action = wm_action_history.flatten(1)
 
-
         # process trajectory history
-        env_ids = dones.nonzero(as_tuple=False).flatten()
+        env_ids = dones_cpu.nonzero(as_tuple=False).flatten()
         trajectory_history[env_ids] = 0
         obs_without_command = torch.concat((obs[:, env.privileged_dim:env.privileged_dim + 6],
                                             obs[:, env.privileged_dim + 9:-env.height_dim]),
-                                           dim=1)
+                                           dim=1).to('cpu')
         trajectory_history = torch.concat(
             (trajectory_history[:, 1:], obs_without_command.unsqueeze(1)), dim=1)
 
         if RECORD_FRAMES:
             if i % 2:
-                filename = os.path.join(LEGGED_GYM_ROOT_DIR, 'logs', train_cfg.runner.experiment_name, 'exported', 'frames', f"{img_idx}.png")
+                filename = os.path.join(frames_dir, f"{img_idx:06d}.png")
                 env.gym.write_viewer_image_to_file(env.viewer, filename)
-                img_idx += 1 
+                img_idx += 1
         if MOVE_CAMERA:
             lootat = env.root_states[8, :3]
+            # Ensure camera position computation stays on CPU
             camara_position = lootat.detach().cpu().numpy() + [0, 1, 0]
             env.set_camera(camara_position, lootat)
 
@@ -248,10 +256,23 @@ def play(args):
 
     print('total reward:', total_reward)
 
+    # stitch captured frames into a video
+    if RECORD_FRAMES:
+        frame_files = sorted(
+            [os.path.join(frames_dir, f) for f in os.listdir(frames_dir) if f.endswith('.png')]
+        )
+        if frame_files:
+            with imageio.get_writer(video_path, fps=25) as writer:
+                for frame_file in frame_files:
+                    writer.append_data(imageio.imread(frame_file))
+            print(f"Video saved to: {video_path}")
+
 if __name__ == '__main__':
-    EXPORT_POLICY = True
-    RECORD_FRAMES = False
+    EXPORT_POLICY = False
+    RECORD_FRAMES = True
     MOVE_CAMERA = True
     args = get_args()
-    args.rl_device = args.sim_device
+    # Force both rl and sim devices to CPU
+    args.rl_device = 'cpu'
+    args.sim_device = 'cpu'
     play(args)
