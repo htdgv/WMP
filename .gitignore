@@ -1,0 +1,11 @@
+notebooks/
+__pycache__*/
+out/
+logs/
+data/
+*.png
+*.csv
+archive/
+*.npy
+test*.py
+isaacgym/
