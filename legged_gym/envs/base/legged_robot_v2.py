@@ -197,10 +197,7 @@ class LeggedRobot(BaseTask):
         if self.privileged_obs_buf is not None:
             self.privileged_obs_buf = torch.clip(self.privileged_obs_buf, -clip_obs, clip_obs)
 
-        if self.cfg.depth.use_camera and self.global_counter % self.cfg.depth.update_interval == 0:
-            self.extras["depth"] = self.depth_buffer[:, -2]
-        else:
-            self.extras["depth"] = None
+        self.extras["depth"] = self.depth_buffer[:, -2]
 
         return policy_obs, self.privileged_obs_buf, self.rew_buf, self.reset_buf, self.extras, reset_env_ids, terminal_amp_states
 
@@ -834,7 +831,7 @@ class LeggedRobot(BaseTask):
         if self.cfg.domain_rand.randomize_gains:
             self.randomized_p_gains, self.randomized_d_gains = self.compute_randomized_gains(self.num_envs)
 
-        if self.cfg.depth.use_camera:
+        if True: # if self.cfg.depth.use_camera:
             self.depth_buffer = torch.zeros(self.cfg.depth.camera_num_envs,
                                             self.cfg.depth.buffer_len,
                                             self.cfg.depth.resized[0],
@@ -1010,7 +1007,7 @@ class LeggedRobot(BaseTask):
         self.randomized_added_masses = torch.zeros(self.num_envs, 1, device='cpu', requires_grad=False)
         self.randomized_com_pos = torch.zeros(self.num_envs, 3, device='cpu', requires_grad=False)
 
-        if self.cfg.depth.use_camera:
+        if True: # if self.cfg.depth.use_camera:
             self.cfg.depth.camera_num_envs = min(self.cfg.depth.camera_num_envs, self.num_envs)
             self.depth_index_without_crawl_tilt = np.random.choice(range(self.tilt_start_idx), self.cfg.depth.camera_num_envs
                                                                     - (self.crawl_end_idx - self.tilt_start_idx), replace=False)

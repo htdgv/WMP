@@ -2,6 +2,7 @@
 
 This document records changes made to fit with our current server and environment. Please refer to the original README.md for more details on commands and instructions.
 
+For automatic execution, please refer to `script/run.sh` for the latest version of commands.
 ## Environment Setup
 ```bash
 # Create a new python virtual env with python 3.6, 3.7 or 3.8 (3.8 recommended)
@@ -39,6 +40,8 @@ pip install ruamel.yaml
 pip install matplotlib
 pip install opencv-python
 pip install imageio
+pip install imageio[ffmpeg]
+pip install imageio[pyav]
 ```
 
 
@@ -72,6 +75,7 @@ In `legged_gym/envs/a1/a1_config.py`:
 
 In `legged_gym/envs/base/legged_robot_config.py`:
 - line 39: `self.num_envs = 4096` -> `self.num_envs = 512`
+- line 108: `use_camera = False` --> `use_camera = True`
 
 | GPU VRAM | Suggested `num_envs` |
 | -------- | -------------------- |
@@ -162,6 +166,10 @@ In `rsl_rl/runners/on_policy_runner.py`:
 
 In `rsl_rl/runners/wmp_runner.py`: 
 - line 75: `self.device = device` --> `self.device = "cpu"`
+- line 294: `if (self.env.cfg.depth.use_camera):` --> `if True:`
+- line 293: `if (self.env.global_counter % self.wm_update_interval == 0):` --> `if True:`
+- line 410: `if(self.env.cfg.depth.use_camera):` --> `if True:`
+- line 224: `if(self.env.cfg.depth.use_camera):` --> `if True:`
 
 In `rsl_rl/storage/rollout_storage.py`: 
 - line 62: `self.device = device` --> `self.device = "cpu"`
