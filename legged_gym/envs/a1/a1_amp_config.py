@@ -40,7 +40,7 @@ MOTION_FILES = glob.glob('datasets/mocap_motions/*')
 
 class A1AMPCfg(LeggedRobotCfg):
     class env(LeggedRobotCfg.env):
-        num_envs = 4096
+        num_envs = 512
         include_history_steps = None  # Number of steps of history to include.
         prop_dim = 33 # proprioception
         action_dim = 12
@@ -139,7 +139,7 @@ class A1AMPCfg(LeggedRobotCfg):
 
     class depth:
         use_camera = True
-        camera_num_envs = 1024
+        camera_num_envs = 256
         camera_terrain_num_rows = 10
         camera_terrain_num_cols = 20
 

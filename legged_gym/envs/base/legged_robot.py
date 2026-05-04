@@ -40,8 +40,8 @@ from warnings import WarningMessage
 import numpy as np
 import os
 
-from isaacgym.torch_utils import *
-from isaacgym import gymtorch, gymapi, gymutil
+from isaacgym.python.isaacgym.torch_utils import *
+from isaacgym.python.isaacgym import gymtorch, gymapi, gymutil
 
 import torch, torchvision
 from torch import Tensor
