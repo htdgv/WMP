@@ -170,6 +170,10 @@ In `rsl_rl/runners/wmp_runner.py`:
 - line 293: `if (self.env.global_counter % self.wm_update_interval == 0):` --> `if True:`
 - line 410: `if(self.env.cfg.depth.use_camera):` --> `if True:`
 - line 224: `if(self.env.cfg.depth.use_camera):` --> `if True:`
+- line 393: `if(self.env.cfg.depth.use_camera):` --> `if True:`
+- line 53: `import ruamel.yaml as yaml` --> `from ruamel.yaml import YAML`
+- line 145: `configs = yaml.safe_load(` --> `yaml_loader = YAML(typ='safe', pure=True); configs = yaml_loader.load(`
+- line 298: `buffer_size = self.wm_buffer["forward_height_map"].shape[1]; self.wm_buffer_index = (self.wm_buffer_index + 1) % buffer_size` --> `wm_buffer_index = (self.wm_buffer_index + 1) % buffer_size`
 
 In `rsl_rl/storage/rollout_storage.py`: 
 - line 62: `self.device = device` --> `self.device = "cpu"`
@@ -180,9 +184,5 @@ In `rsl_rl/storage/rollout_storage.py`:
 
 In `legged_gym/envs/__init__.py`: 
 - line 33: `from .base.legged_robot import LeggedRobot` --> `from .base.legged_robot_v2 import LeggedRobot`
-
-In `rsl_rl/runners/wmp_runner.py`:
-- line 53: `import ruamel.yaml as yaml` --> `from ruamel.yaml import YAML`
-- line 145: `configs = yaml.safe_load(` --> `yaml_loader = YAML(typ='safe', pure=True); configs = yaml_loader.load(`
 
 In `rsl_rl/datasets/motion_loader.py`: replace all `np.int` with `np.int32` to avoid deprecation warning.

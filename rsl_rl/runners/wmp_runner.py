@@ -295,7 +295,7 @@ class WMPRunner:
                             forward_heightmap = self.env.get_forward_map().to(self._world_model.device)
                             pred_depth_image = self.depth_predictor(forward_heightmap, wm_obs["prop"])
                             wm_obs["image"] = pred_depth_image
-                            self.wm_buffer["forward_height_map"][range(self.env.num_envs), self.wm_buffer_index,:] = forward_heightmap[:].to('cpu')
+                            buffer_size = self.wm_buffer["forward_height_map"].shape[1]; self.wm_buffer_index = (self.wm_buffer_index + 1) % buffer_size    # self.wm_buffer["forward_height_map"][range(self.env.num_envs), self.wm_buffer_index,:] = forward_heightmap[:].to('cpu')
                             wm_obs["image"][self.env.depth_index] = infos["depth"].unsqueeze(-1).to(self._world_model.device)
                             self.wm_buffer["image"][range(self.env.cfg.depth.camera_num_envs),
                             self.wm_buffer_index[self.env.depth_index], :] = wm_obs["image"][self.env.depth_index].to(
@@ -390,7 +390,7 @@ class WMPRunner:
             "reward": torch.zeros((self.env.num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,),
                                   device=self._world_model.device),
         }
-        if(self.env.cfg.depth.use_camera):
+        if True:
             self.wm_dataset["image"] = torch.zeros(((self.env.cfg.depth.camera_num_envs, int(self.env.max_episode_length / self.wm_update_interval) + 3,)
                                                + self.env.cfg.depth.resized + (1,)), device=self._world_model.device)
             self.wm_dataset["forward_height_map"] = torch.zeros(
